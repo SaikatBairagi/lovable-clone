@@ -28,8 +28,11 @@ public class ProjectServiceImpl implements ProjectService {
     ProjectMapper projectMapper;
 
     @Override
-    public List<ProjectSummeryResponse> getAllProjects() {
-        return List.of();
+    public List<ProjectSummeryResponse> getAllProjects(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new NoSuchElementException("User not found"));
+        List<Project> listOfProjects = projectRepository.findByUser(user);
+
+        return projectMapper.toProjectSummeryResponse(listOfProjects);
     }
 
     @Override
