@@ -43,7 +43,7 @@ public class ProjectController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<ProjectRequest> updateProject(
+    public ResponseEntity<ProjectResponse> updateProject(
             @PathVariable Long id,
             @RequestBody ProjectRequest project) {
         Long userId = 1L;
@@ -54,7 +54,7 @@ public class ProjectController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProjectById(@PathVariable Long id) {
         Long userId = 1L;
-        projectService.softDelete(id);
+        projectService.softDelete(id, userId);
         return ResponseEntity.noContent().build();
     }
 

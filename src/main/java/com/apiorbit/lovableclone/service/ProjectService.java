@@ -18,10 +18,12 @@ public interface ProjectService {
             Long userId,
             ProjectRequest project);
 
-    ProjectRequest updateProject(
+    ProjectResponse updateProject(
             Long id,
             Long userId,
             ProjectRequest project);
 
-    void softDelete(Long id);
+    void softDelete(
+            Long id,
+            Long userId);
 }
