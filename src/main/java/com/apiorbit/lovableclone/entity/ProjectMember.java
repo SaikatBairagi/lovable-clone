@@ -11,6 +11,7 @@ import java.time.Instant;
 
 @Setter
 @Getter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -24,7 +25,7 @@ public class ProjectMember {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("memberId")
-    User inviter;
+    User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("projectId")

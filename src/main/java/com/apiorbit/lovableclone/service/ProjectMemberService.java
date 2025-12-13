@@ -12,7 +12,7 @@ public interface ProjectMemberService {
             Long userId,
             Long projectId);
 
-    Void deleteMember(
+    void deleteMember(
             Long projectId,
             Long userId,
             Long memberId);

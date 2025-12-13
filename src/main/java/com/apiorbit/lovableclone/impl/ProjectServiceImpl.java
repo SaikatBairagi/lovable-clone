@@ -4,8 +4,12 @@ import com.apiorbit.lovableclone.dto.project.ProjectRequest;
 import com.apiorbit.lovableclone.dto.project.ProjectResponse;
 import com.apiorbit.lovableclone.dto.project.ProjectSummeryResponse;
 import com.apiorbit.lovableclone.entity.Project;
+import com.apiorbit.lovableclone.entity.ProjectMember;
+import com.apiorbit.lovableclone.entity.ProjectMemberId;
 import com.apiorbit.lovableclone.entity.User;
+import com.apiorbit.lovableclone.enumaration.MemberRole;
 import com.apiorbit.lovableclone.mapper.ProjectMapper;
+import com.apiorbit.lovableclone.repository.ProjectMemberRepository;
 import com.apiorbit.lovableclone.repository.ProjectRepository;
 import com.apiorbit.lovableclone.repository.UserRepository;
 import com.apiorbit.lovableclone.service.ProjectService;
@@ -28,6 +32,7 @@ public class ProjectServiceImpl implements ProjectService {
     UserRepository userRepository;
     ProjectRepository projectRepository;
     ProjectMapper projectMapper;
+    ProjectMemberRepository projectMemberRepository;
 
     @Override
     public List<ProjectSummeryResponse> getAllProjects(Long userId) {
@@ -58,7 +63,16 @@ public class ProjectServiceImpl implements ProjectService {
                 .user(user)
                 .name(projectRequest.title())
                 .build();
-        project = projectRepository.save(project);
+        project = projectRepository.saveAndFlush(project);
+        ProjectMemberId projectMemberId = new ProjectMemberId(project.getId(), user.getId());
+        ProjectMember projectMember = ProjectMember
+                .builder()
+                .projectMemberId(projectMemberId)
+                .user(user)
+                .project(project)
+                .memberRole(MemberRole.ADMIN)
+                .build();
+        projectMemberRepository.save(projectMember);
         return projectMapper.toProjectResponse(project);
     }
 
