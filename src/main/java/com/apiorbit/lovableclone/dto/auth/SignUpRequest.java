@@ -1,10 +1,8 @@
 package com.apiorbit.lovableclone.dto.auth;
 
-
-
-
 public record SignUpRequest(
-        String name,
+        String firstName,
+        String lastName,
         String email,
         String password
 ) {
