@@ -5,6 +5,7 @@ import com.apiorbit.lovableclone.dto.auth.LoginRequest;
 import com.apiorbit.lovableclone.dto.auth.SignUpRequest;
 import com.apiorbit.lovableclone.dto.auth.UserProfileResponse;
 import com.apiorbit.lovableclone.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -21,12 +22,12 @@ public class AuthController {
     AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<AuthResponse> signUp(@RequestBody SignUpRequest signUpRequest) {
+    public ResponseEntity<AuthResponse> signUp(@RequestBody @Valid SignUpRequest signUpRequest) {
         return ResponseEntity.ok().body(authService.signUp(signUpRequest));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest login){
+    public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest login){
         return ResponseEntity.ok().body(authService.logIn(login));
     }
 
