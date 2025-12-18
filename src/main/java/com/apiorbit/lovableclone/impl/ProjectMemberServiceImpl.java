@@ -8,10 +8,13 @@ import com.apiorbit.lovableclone.entity.ProjectMember;
 import com.apiorbit.lovableclone.entity.ProjectMemberId;
 import com.apiorbit.lovableclone.entity.User;
 import com.apiorbit.lovableclone.enumaration.ProjectInviteRequest;
+import com.apiorbit.lovableclone.error.BadRequestException;
+import com.apiorbit.lovableclone.error.NoResourceFoundException;
 import com.apiorbit.lovableclone.mapper.MemberResponseMapper;
 import com.apiorbit.lovableclone.repository.ProjectMemberRepository;
 import com.apiorbit.lovableclone.repository.ProjectRepository;
 import com.apiorbit.lovableclone.repository.UserRepository;
+import com.apiorbit.lovableclone.security.AuthUtil;
 import com.apiorbit.lovableclone.service.ProjectMemberService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +23,8 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
@@ -36,13 +37,13 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     ProjectRepository projectRepository;
     MemberResponseMapper memberResponseMapper;
     UserRepository userRepository;
+    AuthUtil authUtil;
 
     @Override
     public List<MemberResponse> getAllMembers(
-            Long userId,
             Long projectId) {
         log.info("In the MemberResponse method");
-        Project project = projectRepository.findProjectByProjectIdAndUserId(projectId, userId).orElseThrow(()-> new NoSuchElementException("Project not found"));
+        Long userId = authUtil.getUserId();
 
         List<MemberResponse> memberList = new ArrayList<>();
         //Adding the Owner in the list
@@ -61,31 +62,25 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     @Override
     public void deleteMember(
             Long projectId,
-            Long userId,
             Long memberId) {
         log.info("In the deleteMember method");
-        Project project = projectRepository.findProjectByProjectIdAndUserId(projectId, userId).orElseThrow(()-> new NoSuchElementException("Project not found"));
-        if(memberId.equals(project.getUser().getId()))
-            throw new NoSuchElementException("Owner can not be disassociated if Project is not Deleted..");
-        if(!userId.equals(project.getUser().getId()))
-            throw new IllegalArgumentException("Can not delete member if not an Owner");
+        Long userId = authUtil.getUserId();
         ProjectMemberId projectMemberId = new ProjectMemberId(projectId, memberId);
-        ProjectMember projectMember = projectMemberRepository.findById(projectMemberId).orElseThrow(()-> new NoSuchElementException("Member not found"));
+        ProjectMember projectMember = projectMemberRepository.findById(projectMemberId).orElseThrow(()-> new NoResourceFoundException("ProjectMember", projectMemberId.toString()));
         projectMemberRepository.delete(projectMember);
     }
 
     @Override
     public MemberResponse updateMemberRole(
             Long projectId,
-            Long userId,
             Long memberId,
             UpdateMemberRole memberRole) {
         log.info("In the updateMemberRole method");
+        Long userId = authUtil.getUserId();
         if(userId.equals(memberId))
             throw new RuntimeException("Could not change owner role");
         ProjectMemberId projectMemberId = new ProjectMemberId(projectId, memberId);
-        log.info("projectMemberId: " + projectMemberId);
-        ProjectMember projectMember = projectMemberRepository.findById(projectMemberId).orElseThrow(()-> new NoSuchElementException("Member not found"));
+        ProjectMember projectMember = projectMemberRepository.findById(projectMemberId).orElseThrow(()-> new NoResourceFoundException("ProjectMember", projectMemberId.toString()));
         projectMember.setMemberRole(memberRole.role());
         projectMember = projectMemberRepository.saveAndFlush(projectMember);
         return memberResponseMapper.toMemberResponse(projectMember.getUser(), projectMember);
@@ -95,21 +90,18 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     @Transactional
     public MemberResponse inviteMember(
             Long projectId,
-            Long userId,
             InviteMemberRequest memberRequest) {
-        Project project = projectRepository.findProjectByProjectIdAndUserId(projectId, userId).orElseThrow(()-> new NoSuchElementException("Project not found"));
-        if(memberRequest.email().equals(project.getUser().getEmail())){
-            throw new IllegalArgumentException("Can not invite yourself");
-        }
+        Long userId = authUtil.getUserId();
+        Project project = projectRepository.findProjectByProjectIdAndUserId(projectId, userId).orElseThrow(()-> new NoResourceFoundException("Project", projectId.toString()));
         // Fetch the Invitee's user profile
-        User invitee = userRepository.findByEmail(memberRequest.email()).orElseThrow(()-> new NoSuchElementException("User not found"));
+        User invitee = userRepository.findByEmail(memberRequest.email()).orElseThrow(()-> new NoResourceFoundException("User", memberRequest.email()));
         //checking if the user is already been added to the project
         ProjectMemberId projectMemberId = new ProjectMemberId(projectId, invitee.getId());
         log.info("projectMemberId: " + projectMemberId);
         Optional<ProjectMember> projectMemberOptional = projectMemberRepository.findById(projectMemberId);
         log.info("projectMemberOptional: " + projectMemberOptional);
         if(projectMemberOptional.isPresent()){
-            throw new IllegalArgumentException("User already part of this project");
+            throw new BadRequestException("User already part of this project");
         }
 
         ProjectMember projectMember = ProjectMember.builder()

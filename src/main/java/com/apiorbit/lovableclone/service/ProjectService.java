@@ -8,22 +8,17 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 public interface ProjectService {
-    List<ProjectSummeryResponse> getAllProjects(Long userId);
+    List<ProjectSummeryResponse> getAllProjects();
 
     ProjectResponse getUserProjectById(
-            Long projectId,
-            Long userId);
+            Long projectId);
 
-    ProjectResponse createProject(
-            Long userId,
-            ProjectRequest project);
+    ProjectResponse createProject(ProjectRequest project);
 
     ProjectResponse updateProject(
             Long id,
-            Long userId,
             ProjectRequest project);
 
     void softDelete(
-            Long id,
-            Long userId);
+            Long id);
 }

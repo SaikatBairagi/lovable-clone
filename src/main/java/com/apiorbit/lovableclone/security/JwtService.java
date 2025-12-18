@@ -44,6 +44,12 @@ public class JwtService {
         return extractAllClaims(token).get("Email").toString();
     }
 
+    public AuthenticatedUser extractUserRecord(String token) {
+        Long userId =Long.parseLong(extractAllClaims(token).getSubject());
+        String userEmail = extractAllClaims(token).get("Email").toString();
+        return new AuthenticatedUser(userId, userEmail);
+    }
+
     public boolean isTokenValid(String token, UserDetails userDetails) {
         String username = extractUsername(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));

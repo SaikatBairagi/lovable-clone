@@ -29,12 +29,13 @@ public class AuthFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring("Bearer ".length());
-        String userEmail = jwtService.extractUsername(token);
+//        String userEmail = jwtService.extractUsername(token);
+        AuthenticatedUser authUser = jwtService.extractUserRecord(token);
 
-        UserDetails userDetails = loginService.loadUserByUsername(userEmail);
+        UserDetails userDetails = loginService.loadUserByUsername(authUser.email());
 
         if(SecurityContextHolder.getContext().getAuthentication() == null) {
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userEmail, null,userDetails.getAuthorities());
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authUser, null,userDetails.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
         filterChain.doFilter(request, response);

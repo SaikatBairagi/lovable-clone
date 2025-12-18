@@ -24,8 +24,7 @@ public class ProjectMemberController {
 
     @GetMapping
     public ResponseEntity<List<MemberResponse>> getMembers(@PathVariable Long projectId) {
-        Long userId = 1L;
-        return ResponseEntity.ok().body(projectMemberService.getAllMembers(userId, projectId));
+        return ResponseEntity.ok().body(projectMemberService.getAllMembers(projectId));
 
     }
 
@@ -33,8 +32,7 @@ public class ProjectMemberController {
     public ResponseEntity<MemberResponse> inviteMember(
             @PathVariable Long projectId,
             @RequestBody InviteMemberRequest memberRequest) {
-        Long userId = 1L;
-        return ResponseEntity.ok().body(projectMemberService.inviteMember(projectId, userId, memberRequest));
+        return ResponseEntity.ok().body(projectMemberService.inviteMember(projectId, memberRequest));
     }
 
     @PatchMapping("/updateRole/{memberId}")
@@ -42,16 +40,14 @@ public class ProjectMemberController {
             @PathVariable Long projectId,
             @PathVariable Long memberId,
             @RequestBody UpdateMemberRole memberRole) {
-        Long userId = 1L;
-        return ResponseEntity.ok().body(projectMemberService.updateMemberRole(projectId, userId, memberId, memberRole));
+        return ResponseEntity.ok().body(projectMemberService.updateMemberRole(projectId, memberId, memberRole));
     }
 
     @DeleteMapping("/delete/{memberId}")
     public ResponseEntity<Void> deleteMember(
             @PathVariable Long projectId,
             @PathVariable Long memberId) {
-        Long userId = 1L;
-        projectMemberService.deleteMember(projectId, userId, memberId);
+        projectMemberService.deleteMember(projectId, memberId);
         return ResponseEntity.noContent().build();
     }
 

@@ -23,9 +23,6 @@ public class Project {
     @Column(length = 100,  nullable = false)
     private String name;
     private Boolean isPublic = false;
-    @ManyToOne
-    @JoinColumn
-    private User user;
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
