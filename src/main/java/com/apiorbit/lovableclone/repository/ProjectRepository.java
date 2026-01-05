@@ -38,10 +38,10 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
                         p.id IN (
                                     SELECT pm.projectMemberId.projectId
                                       FROM ProjectMember pm
-                                        WHERE 
+                                        WHERE
                                             pm.user.id = :userId
                                     )
-                        AND p.deletedAt IS NULL 
+                        AND p.deletedAt IS NULL
                         ORDER BY p.updatedAt desc
             """
     )
