@@ -41,6 +41,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     AuthUtil authUtil;
 
     @Override
+    @PreAuthorize("@security.canAccessProject(#projectId)")
     public List<MemberResponse> getAllMembers(
             Long projectId) {
         log.info("In the MemberResponse method");
@@ -61,6 +62,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     }
 
     @Override
+    @PreAuthorize("@security.canAddMember(#projectId)")
     public void deleteMember(
             Long projectId,
             Long memberId) {
@@ -72,6 +74,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     }
 
     @Override
+    @PreAuthorize("@security.canAddMember(#projectId)")
     public MemberResponse updateMemberRole(
             Long projectId,
             Long memberId,

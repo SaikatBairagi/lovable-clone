@@ -5,6 +5,7 @@ import com.apiorbit.lovableclone.dto.billing.PortalResponse;
 import com.apiorbit.lovableclone.dto.billing.checkoutRequest;
 import com.apiorbit.lovableclone.dto.plan.PlanResponse;
 import com.apiorbit.lovableclone.dto.plan.SubscriptionResponse;
+import com.apiorbit.lovableclone.service.PaymentService;
 import com.apiorbit.lovableclone.service.PlanService;
 import com.apiorbit.lovableclone.service.SubscriptionService;
 import lombok.AccessLevel;
@@ -23,6 +24,7 @@ import java.util.List;
 public class BillingController {
 
     SubscriptionService subscriptionService;
+    PaymentService paymentService;
     PlanService planService;
 
     @GetMapping("/plans")
@@ -36,16 +38,14 @@ public class BillingController {
         return ResponseEntity.ok().body(subscriptionService.getCurrentSubscription(userId));
     }
 
-    @PostMapping("/api/stripe/checkout")
+    @PostMapping("/payment/checkout")
     public ResponseEntity<CheckoutResponse> createCheckoutResponse(@RequestBody checkoutRequest request){
-
-        Long userId = 1L;
-        return ResponseEntity.ok().body(subscriptionService.createCheckoutSession(request, userId));
+        return ResponseEntity.ok().body(paymentService.createCheckoutSession(request));
     }
 
-    @PostMapping("/api/stripe/portal")
+    @PostMapping("/payment/portal")
     public ResponseEntity<PortalResponse> openCustomerPortal(){
         Long userId = 1L;
-        return ResponseEntity.ok().body(subscriptionService.openCustomerPortal(userId));
+        return ResponseEntity.ok().body(paymentService.openCustomerPortal(userId));
     }
 }
