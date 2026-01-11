@@ -33,6 +33,7 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String lastName;
     private String avatarUrl;
+    private String stripeCustomerId;
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;

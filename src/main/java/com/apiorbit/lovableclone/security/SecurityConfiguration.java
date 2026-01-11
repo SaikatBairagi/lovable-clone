@@ -28,7 +28,7 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(
                         authorizeRequests -> authorizeRequests
-                                .requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers("/api/auth/**", "/api/webhook/payment").permitAll()
                                // .requestMatchers(HttpMethod.GET,"/api/project/**").permitAll()
                         .anyRequest().authenticated()
                 )
