@@ -2,8 +2,7 @@ package com.apiorbit.lovableclone.entity;
 
 import com.apiorbit.lovableclone.enumaration.SubscriptionStatus;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Data;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -14,6 +13,9 @@ import java.time.Instant;
 @Entity
 @Table
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Subscription {
 
     @Id
@@ -37,7 +39,7 @@ public class Subscription {
     Instant currentPeriodStart;
     Instant currentPeriodEnd;
 
-    Boolean cancelAtPeriodEnd= false;
+    Boolean cancelAtPeriodEnd= Boolean.FALSE;
 
     @CreationTimestamp
     Instant createTs;

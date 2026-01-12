@@ -45,19 +45,25 @@ public class StrpiePaymentServiceImpl implements PaymentService {
         Plan plan = planRepository.findById(request.planId())
                 .orElseThrow(() -> new NoResourceFoundException("No Plan found", request.planId().toString()));
         String stripePriceId = plan.getStripePriceId();
+        User user = userRepository.findById(userId).orElseThrow(() -> new NoResourceFoundException("User", userId.toString()));
 
         //Stripe Subscription starts
-        SessionCreateParams params = SessionCreateParams.builder()
+        var params = SessionCreateParams.builder()
                 .addLineItem(
                         SessionCreateParams.LineItem.builder().setPrice(stripePriceId).setQuantity(1L).build())
                 .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
                 .setSuccessUrl(domainUrl + "/success.html?session_id={CHECKOUT_SESSION_ID}")
                 .setCancelUrl(domainUrl + "/failure.html")
                 .putMetadata("UserId", userId.toString())
-                .putMetadata("PlanId", plan.getId().toString())
-                .build();
+                .putMetadata("PlanId", plan.getId().toString());
+
         try {
-            Session session = Session.create(params);
+            if(user.getStripeCustomerId() == null || user.getStripeCustomerId().isEmpty()) {
+                params.setCustomerEmail(user.getEmail());
+            }else{
+                params.setCustomer(user.getStripeCustomerId());
+            }
+            Session session = Session.create(params.build());
             return new CheckoutResponse(session.getUrl());
         } catch (StripeException e) {
             throw new RuntimeException(e);
@@ -89,12 +95,16 @@ public class StrpiePaymentServiceImpl implements PaymentService {
 
     }
 
-    private void handleInvoiceFailed(Invoice stripeObject) {
+    private void handleInvoiceFailed(Invoice invoice) {
+        //Getting the Subscription Object from Invoice
+        Subscription subscription = getSubscriptionFromInvoice(invoice);
+        subscriptionService.markSubscriptionPastDue(subscription.getId());
+
     }
 
     private void handleSubscriptionDeleted(Subscription delSubscription) {
         if(delSubscription == null){
-            log.info("Delete Subscription is null");
+            log.info("Delete Subscription is null inside handleSubscriptionDeleted");
             return;
         }
         subscriptionService.deleteSubscription(delSubscription.getId());
@@ -102,7 +112,7 @@ public class StrpiePaymentServiceImpl implements PaymentService {
 
     private void handleSubscriptionUpdate(Subscription subscription) {
         if(subscription == null) {
-            log.info("Subscription is null");
+            log.info("Subscription is null inside handleSubscriptionUpdate");
             return;
         }
 
@@ -123,7 +133,17 @@ public class StrpiePaymentServiceImpl implements PaymentService {
 
 
 
-    private void handleInvoicePaid(Invoice stripeObject) {
+    private void handleInvoicePaid(Invoice invoice) {
+        //Getting the Subscription Object from Invoice
+        Subscription subscription = getSubscriptionFromInvoice(invoice);
+        if(subscription == null){
+            log.info("Subscription is null inside handleInvoicePaid");
+        }
+        SubscriptionItem item = subscription.getItems().getData().get(0);
+        Instant startDate = Instant.ofEpochSecond(item.getCurrentPeriodStart());
+        Instant endDate = Instant.ofEpochSecond(item.getCurrentPeriodEnd());
+        subscriptionService.confirmSubscription(subscription.getId(),startDate,endDate);
+
     }
 
 
@@ -149,7 +169,7 @@ public class StrpiePaymentServiceImpl implements PaymentService {
             userRepository.save(user);
         }
 
-        subscriptionService.createSubscription(planId, stripeUserId, session);
+        subscriptionService.createSubscription(planId, subscriptionId, user);
 
 
 
@@ -174,5 +194,18 @@ public class StrpiePaymentServiceImpl implements PaymentService {
         return planRepository.findByStripePriceId(price.getId())
                 .map(plan -> plan.getId())
                 .orElse(null);
+    }
+
+    private Subscription getSubscriptionFromInvoice(Invoice invoice) {
+        if(invoice == null) return null;
+        String subscriptionId= invoice.getParent().getSubscriptionDetails().getSubscription();
+        try {
+            Subscription subscription= Subscription.retrieve(subscriptionId);
+            if(subscription == null) throw new NoResourceFoundException("Subscription", subscriptionId.toString());
+            return subscription;
+        } catch (StripeException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 }

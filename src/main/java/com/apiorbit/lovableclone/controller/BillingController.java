@@ -35,7 +35,7 @@ public class BillingController {
     @GetMapping("/me/subscription")
     public ResponseEntity<SubscriptionResponse> getMySubscription(){
         Long userId = 1L;
-        return ResponseEntity.ok().body(subscriptionService.getCurrentSubscription(userId));
+        return ResponseEntity.ok().body(subscriptionService.getCurrentSubscription());
     }
 
     @PostMapping("/payment/checkout")
