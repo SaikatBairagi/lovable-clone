@@ -8,11 +8,14 @@ import java.util.List;
 
 public interface FileService {
     List<FileNode> getFileTree(
-            Long userId,
             Long projectId);
 
     FileContentResponse getFileContent(
             Long projectId,
-            Long userId,
             String path);
+
+    void saveFile(
+            Long projectId,
+            String filePath,
+            String fileContent);
 }

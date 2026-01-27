@@ -15,6 +15,7 @@ import com.apiorbit.lovableclone.repository.ProjectRepository;
 import com.apiorbit.lovableclone.repository.UserRepository;
 import com.apiorbit.lovableclone.security.AuthUtil;
 import com.apiorbit.lovableclone.service.ProjectService;
+import com.apiorbit.lovableclone.service.ProjectTemplateService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -39,6 +40,7 @@ public class ProjectServiceImpl implements ProjectService {
     ProjectMapper projectMapper;
     ProjectMemberRepository projectMemberRepository;
     AuthUtil authUtil;
+    ProjectTemplateService projectTemplateService;
 
     @Override
     public List<ProjectSummeryResponse> getAllProjects() {
@@ -82,6 +84,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .memberRole(MemberRole.ADMIN)
                 .build();
         projectMemberRepository.save(projectMember);
+        projectTemplateService.initializeProjectFromTemplate(project.getId());
         return projectMapper.toProjectResponse(project);
     }
 

@@ -25,7 +25,7 @@ public class FileController {
 
     public ResponseEntity<List<FileNode>> getFileTree(@PathVariable Long projectId) {
         Long userId = 1L;
-        return ResponseEntity.ok().body(fileService.getFileTree(userId, projectId));
+        return ResponseEntity.ok().body(fileService.getFileTree(projectId));
     }
 
     @GetMapping("/{*path}")
@@ -33,7 +33,7 @@ public class FileController {
             @PathVariable Long projectId,
             @PathVariable String path) {
         Long userId = 1L;
-        return ResponseEntity.ok().body(fileService.getFileContent(projectId, userId, path));
+        return ResponseEntity.ok().body(fileService.getFileContent(projectId, path));
     }
 
 }

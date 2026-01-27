@@ -1,5 +1,6 @@
 package com.apiorbit.lovableclone.security;
 
+import jakarta.servlet.DispatcherType;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -30,6 +31,7 @@ public class SecurityConfiguration {
                         authorizeRequests -> authorizeRequests
                                 .requestMatchers("/api/auth/**", "/api/webhook/payment").permitAll()
                                // .requestMatchers(HttpMethod.GET,"/api/project/**").permitAll()
+                                .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class);
