@@ -1,11 +1,15 @@
 package com.apiorbit.lovableclone.impl;
 
-import com.apiorbit.lovableclone.config.AiConfig;
-import com.apiorbit.lovableclone.llm.PromptUtil;
+
+import com.apiorbit.lovableclone.entity.*;
+import com.apiorbit.lovableclone.enumaration.ChatEventEnum;
+import com.apiorbit.lovableclone.enumaration.MessageRole;
+import com.apiorbit.lovableclone.error.NoResourceFoundException;
+import com.apiorbit.lovableclone.llm.PromptUtil2;
 import com.apiorbit.lovableclone.llm.advisor.FileTreeAdvisor;
+import com.apiorbit.lovableclone.llm.parser.LLMResponseParser;
 import com.apiorbit.lovableclone.llm.tools.ReadProjectFiles;
-import com.apiorbit.lovableclone.repository.ProjectFileRepository;
-import com.apiorbit.lovableclone.repository.ProjectRepository;
+import com.apiorbit.lovableclone.repository.*;
 import com.apiorbit.lovableclone.security.AuthUtil;
 import com.apiorbit.lovableclone.service.FileService;
 import com.apiorbit.lovableclone.service.GenAIService;
@@ -14,15 +18,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.SignalType;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,7 +41,11 @@ public class GenAIServiceImpl implements GenAIService {
     private static final Pattern FILE_TAG_PATTERN = Pattern.compile("<file path=\"([^\"]+)\">(.*?)</file>", Pattern.DOTALL);
     private final FileService fileService;
     private final FileTreeAdvisor  fileTreeAdvisor;
-
+    private final ChatSessionRepository chatSessionRepository;
+    private final UserRepository userRepository;
+    private final LLMResponseParser  responseParser;
+    private final ChatMessageRepository chatMessageRepository;
+    private final ChatEventRepository  chatEventRepository;
 
 
     @Override
@@ -50,7 +57,7 @@ public class GenAIServiceImpl implements GenAIService {
 
         StringBuilder fullResponse = new StringBuilder();
 
-        createChatSessionIfNotExist(userId, projectId);
+        ChatSession chatSession = createChatSessionIfNotExist(userId, projectId);
         ReadProjectFiles readProjectFiles = new ReadProjectFiles(fileService, projectId);
 
         //Create a advisorParam to give LLM some context
@@ -60,10 +67,13 @@ public class GenAIServiceImpl implements GenAIService {
         );
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
+        AtomicReference<Long> startTime = new AtomicReference<>(System.currentTimeMillis());
+        AtomicReference<Long> endTime = new AtomicReference<>(0L);
+
         //calling LLM
         return chatClient
                 .prompt()
-                .system(PromptUtil.CODE_GENERATION_SYSTEM_PROMPT)
+                .system(PromptUtil2.CODE_GENERATION_SYSTEM_PROMPT)
                 .user(userMessage)
                 .tools(readProjectFiles)
                 .advisors(a -> {
@@ -74,11 +84,16 @@ public class GenAIServiceImpl implements GenAIService {
                 .chatResponse()
                 .doOnNext(response -> {
                     String content = response.getResult().getOutput().getText();
+                    if(content != null && !content.isEmpty() && endTime.get() == 0) { // first non-empty chunk received
+                        endTime.set(System.currentTimeMillis());
+                    }
                     fullResponse.append(content);
                 })
                 .doOnComplete(() -> {
                     Schedulers.boundedElastic().schedule(() -> {
-                        saveFileAndFileTreeOnCompletion(fullResponse.toString(), projectId);
+                        long duration = (endTime.get() - startTime.get()) /  1000;
+                        //saveFileAndFileTreeOnCompletion(fullResponse.toString(), projectId);
+                        saveFileAndMessageEvents(fullResponse.toString(), chatSession, userMessage, duration);
                     });
                 })
                 .doOnError(error -> log.error("Error during streaming for projectId: {}", projectId))
@@ -118,10 +133,67 @@ public class GenAIServiceImpl implements GenAIService {
         }
     }
 
+    private void saveFileAndMessageEvents(String fullResponseFromLLM, ChatSession chatSession, String userMessage, Long duration) {
+        Long projectId = chatSession.getProject().getId();
+        //Saving the user message
+        ChatMessage chatMessage = ChatMessage.builder()
+                .chatSession(chatSession)
+                .role(MessageRole.USER)
+                .content(userMessage)
+                .build();
+
+        chatMessageRepository.save(chatMessage);
+
+        ChatMessage assistantChatMessage = ChatMessage.builder()
+                .chatSession(chatSession)
+                .role(MessageRole.ASSISTANT)
+                .content("Assistant message here...")
+                .build();
+        assistantChatMessage = chatMessageRepository.saveAndFlush(assistantChatMessage);
+
+        List<ChatEvent> chatEvents = responseParser.parseChatEvents(fullResponseFromLLM, assistantChatMessage);
+
+        chatEvents
+                .stream()
+                        .filter(event -> event.getType() == ChatEventEnum.FILE_EDIT)
+                                .forEach(file -> fileService.saveFile(projectId, file.getFilePath(), file.getContent()));
+        chatEvents.add(0, (ChatEvent.builder()
+                .type(ChatEventEnum.THOUGHT)
+                .chatMessage(assistantChatMessage)
+                .content("Thought for "+duration+"s")
+                .sequence(0)
+                .build()));
+        log.info("chatEvents printed: \n {}", chatEvents);
+        assistantChatMessage.setChatEvents(chatEvents);
+        //chatEventRepository.saveAll(chatEvents);
+        chatMessageRepository.save(assistantChatMessage);
 
 
-    private void createChatSessionIfNotExist(
+
+
+    }
+
+
+    /**
+     * Creating a ChatSession for the chat to save
+     * @param userId
+     * @param projectId
+     * @return
+     */
+    private ChatSession createChatSessionIfNotExist(
             Long userId,
             Long projectId) {
+        ChatMessageId id = new ChatMessageId(userId, projectId);
+        Project project = projectRepository.findById(projectId).orElseThrow(() -> new NoResourceFoundException("Project", projectId.toString()));
+        User user = userRepository.findById(userId).orElseThrow(() -> new NoResourceFoundException("User", userId.toString()));
+        ChatSession chatSession = chatSessionRepository.findById(id).orElse(ChatSession.builder()
+                .id(id)
+                .project(project)
+                .user(user)
+                .build());
+
+        return chatSessionRepository.save(chatSession);
+
+
     }
 }

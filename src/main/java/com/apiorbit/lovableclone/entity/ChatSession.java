@@ -12,6 +12,9 @@ import java.time.Instant;
 @Table(name = "chat_session")
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class ChatSession {
 
     @EmbeddedId

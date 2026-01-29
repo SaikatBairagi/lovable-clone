@@ -34,6 +34,7 @@ public class ReadProjectFiles {
                     fileContent
             ));
         }
+        log.info("Reading project files from: \n {}", files);
         return files;
     }
 }

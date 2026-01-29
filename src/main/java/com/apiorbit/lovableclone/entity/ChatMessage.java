@@ -2,16 +2,20 @@ package com.apiorbit.lovableclone.entity;
 
 import com.apiorbit.lovableclone.enumaration.MessageRole;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Data;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import java.util.List;
+
 @Entity
 @Table(name="chat_message")
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ChatMessage {
 
     @Id
@@ -25,15 +29,20 @@ public class ChatMessage {
             })
     ChatSession chatSession;
 
-    @Column(columnDefinition = "text", nullable = false)
+    @Column(columnDefinition = "text")
     String content;
 
     String toolCalls;
 
     Integer tokenUsed = 0;
+
     @Enumerated(EnumType.STRING)
-            @Column(nullable=false)
-    MessageRole role;
+    @Column(nullable=false)
+    MessageRole role; //USER, ASSISTANT
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "chatMessage", cascade = CascadeType.ALL)
+    @OrderBy("sequence ASC")
+    List<ChatEvent> chatEvents;
 
     @CreationTimestamp
     Instant createdAt;
